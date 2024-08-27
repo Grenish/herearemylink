@@ -6,7 +6,7 @@ import Image from "next/image";
 import { Textarea } from "@nextui-org/react";
 import { motion } from "framer-motion";
 import { auth, db } from "@/lib/firebaseConfig";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 
 export default function NewUser() {
@@ -79,7 +79,7 @@ export default function NewUser() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const user = auth.currentUser;
-
+  
     if (user) {
       try {
         // Save user data in Firestore under "users" collection
@@ -90,19 +90,28 @@ export default function NewUser() {
           bio: formData.bio,
           profileImage: selectedImage,
           email: user.email,
-          uid: user.uid, // User's Firebase Auth UID
+          uid: user.uid,
+          createdAt: serverTimestamp(),
+          link: {
+            blogs: [],
+            smallLinks: [],
+          },
+          extras: {
+            clicks: 0,
+            visitors: 0,
+          },
         });
-
+  
         alert("Profile saved successfully");
-        router.push("/dashboard"); // Redirect after successful profile creation
+        router.push("/dashboard");
       } catch (error) {
         console.error("Error saving profile:", error);
-        alert("Error saving profile");
       }
     } else {
       alert("No user is signed in");
     }
   };
+  
 
   return (
     <div className="h-screen overflow-hidden">
