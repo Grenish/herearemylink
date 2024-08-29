@@ -5,7 +5,7 @@ import "@/app/globals.css";
 const mont = Montserrat({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "User's Dashboard",
+  title: "Dashboard",
   description: "User dashboard",
 };
 
