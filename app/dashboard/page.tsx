@@ -52,16 +52,20 @@ export default function Dashboard() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        console.log("User authenticated:", user.uid); // Add a log to check user UID
         try {
-          const userDocRef = doc(db, "users", user.uid);
+          const userDocRef = doc(db, "users", user.uid); // Fetch user data using uid as document ID
           const userDoc = await getDoc(userDocRef);
-  
+
           if (userDoc.exists()) {
-            console.log("User document found:", userDoc.data()); // Log the data
-            setUserData(userDoc.data());
+            const userData = userDoc.data();
+            if (userData && userData.profile) {
+              setUserData(userData.profile); // Set userData to the profile data
+            } else {
+              console.log("User profile data does not exist.");
+              alert("User profile data does not exist.");
+            }
           } else {
-            console.log("User document does not exist."); // Log for debugging
+            console.log("User document does not exist.");
             alert("User document does not exist.");
           }
         } catch (error) {
@@ -77,10 +81,9 @@ export default function Dashboard() {
         router.push("/"); // Redirect to home or login if no user is signed in
       }
     });
-  
+
     return () => unsubscribe();
   }, [router]);
-  
 
   const handleSaveFatCard = (data: FatCardData) => {
     setFatCards([...fatCards, data]);
@@ -113,129 +116,133 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex">
-      <div className="w-1/5 h-screen border-r flex flex-col items-center p-2">
-        {/* Display user profile image and info */}
-        <div className="mt-5">
-          <img
-            src={userData?.profileImage || "https://via.placeholder.com/150"}
-            alt="Profile"
-            className="w-[200px] h-[200px] rounded-full object-cover"
-          />
-        </div>
-        <h2 className="mt-4 text-xl font-semibold">
-          {userData?.firstName} {userData?.lastName}
-        </h2>
-        <p className="text-xs">@{userData?.username}</p>
-        <p className="text-center text-sm mt-2 bg-gray-200 p-2 rounded-xl">
-          {userData?.bio || "User bio goes here."}
-        </p>
-        <div className="mt-2 flex gap-3">
-          <div className="text-center p-2 px-4 bg-gray-200 rounded-xl">
-            <p className="text-3xl font-bold">
-              {userData?.extras?.visitors || 0}
-            </p>
-            <h2 className="text-xs">Visitors</h2>
-          </div>
-          <div className="text-center p-2 px-4 bg-gray-200 rounded-xl">
-            <p className="text-3xl font-bold">
-              {userData?.extras?.clicks || 0}
-            </p>
-            <h2 className="text-xs">Clicks</h2>
-          </div>
-        </div>
-        <p className="mt-2 text-xs hover:underline cursor-pointer">See More</p>
-        <button
-          className="p-2 bg-gray-300 rounded-lg px-5 mt-2"
-          onClick={handleSignOut}
-        >
-          Logout
-        </button>
-      </div>
-
-      {/* Main content area */}
-      <div className="flex-1">
-        {/* Copy link section */}
-        <div
-          className="p-5 w-full border-b overflow-hidden"
-          onClick={copyToClipboard}
-        >
-          <div className="w-1/2 flex items-center bg-gray-200 rounded-xl pr-3">
-            <input
-              type="text"
-              className="w-full bg-transparent p-3 cursor-pointer outline-none text-sm"
-              value={`herearemylinks.vercel.app/${userData?.username}`}
-              readOnly
-              ref={inputRef}
+    <>
+      <div className="flex">
+        <div className="w-1/5 h-screen border-r flex flex-col items-center p-2">
+          {/* Display user profile image and info */}
+          <div className="mt-5">
+            <img
+              src={userData?.profileImage || "https://via.placeholder.com/150"}
+              alt="Profile"
+              className="w-[200px] h-[200px] rounded-full object-cover"
             />
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="15"
-              height="15"
-              fill="#000000"
-              viewBox="0 0 256 256"
-              className="cursor-pointer"
-            >
-              <path d="M216,32H88a8,8,0,0,0-8,8V80H40a8,8,0,0,0-8,8V216a8,8,0,0,0,8,8H168a8,8,0,0,0,8-8V176h40a8,8,0,0,0,8-8V40A8,8,0,0,0,216,32ZM160,208H48V96H160Zm48-48H176V88a8,8,0,0,0-8-8H96V48H208Z"></path>
-            </svg>
           </div>
-          {copied && (
-            <span className="flex gap-1 items-center text-green-500 mt-1">
-              <p className="text-xs">Copied</p>
+          <h2 className="mt-4 text-xl font-semibold">
+            {userData?.firstName} {userData?.lastName}
+          </h2>
+          <p className="text-xs">@{userData?.username}</p>
+          <p className="text-center text-sm mt-2 bg-gray-200 p-2 rounded-xl">
+            {userData?.bio || "User bio goes here."}
+          </p>
+          <div className="mt-2 flex gap-3">
+            <div className="text-center p-2 px-4 bg-gray-200 rounded-xl">
+              <p className="text-3xl font-bold">
+                {userData?.extras?.visitors || 0}
+              </p>
+              <h2 className="text-xs">Visitors</h2>
+            </div>
+            <div className="text-center p-2 px-4 bg-gray-200 rounded-xl">
+              <p className="text-3xl font-bold">
+                {userData?.extras?.clicks || 0}
+              </p>
+              <h2 className="text-xs">Clicks</h2>
+            </div>
+          </div>
+          <p className="mt-2 text-xs hover:underline cursor-pointer">
+            See More
+          </p>
+          <button
+            className="p-2 bg-gray-300 rounded-lg px-5 mt-2"
+            onClick={handleSignOut}
+          >
+            Logout
+          </button>
+        </div>
+
+        {/* Main content area */}
+        <div className="flex-1">
+          {/* Copy link section */}
+          <div
+            className="p-5 w-full border-b overflow-hidden"
+            onClick={copyToClipboard}
+          >
+            <div className="w-1/2 flex items-center bg-gray-200 rounded-xl pr-3">
+              <input
+                type="text"
+                className="w-full bg-transparent p-3 cursor-pointer outline-none text-sm"
+                value={`herearemylinks.vercel.app/${userData?.username}`}
+                readOnly
+                ref={inputRef}
+              />
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="15"
                 height="15"
-                fill="currentColor"
+                fill="#000000"
                 viewBox="0 0 256 256"
+                className="cursor-pointer"
               >
-                <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+                <path d="M216,32H88a8,8,0,0,0-8,8V80H40a8,8,0,0,0-8,8V216a8,8,0,0,0,8,8H168a8,8,0,0,0,8-8V176h40a8,8,0,0,0,8-8V40A8,8,0,0,0,216,32ZM160,208H48V96H160Zm48-48H176V88a8,8,0,0,0-8-8H96V48H208Z"></path>
               </svg>
-            </span>
-          )}
-        </div>
-
-        {/* Create New Card Button */}
-        <div className="p-5">
-          <button
-            className="text-sm bg-customColor-4 px-5 py-2 rounded-xl"
-            onClick={handleCreateNewClick}
-          >
-            Create New
-          </button>
-        </div>
-
-        {/* Display user's blogs and links */}
-        <div className="p-5">
-          <p className="text-xs">My Links</p>
-          <div className="mt-5 gap-2 grid grid-cols-4">
-            <SmallCardLazyBox />
+            </div>
+            {copied && (
+              <span className="flex gap-1 items-center text-green-500 mt-1">
+                <p className="text-xs">Copied</p>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="15"
+                  height="15"
+                  fill="currentColor"
+                  viewBox="0 0 256 256"
+                >
+                  <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+                </svg>
+              </span>
+            )}
           </div>
-          <p className="text-xs mt-5">My Blogs</p>
 
-          <div className="mt-5 gap-2 grid grid-cols-4">
-            {fatCards.map((card, index) => (
-              <FatCard key={index} {...card} />
-            ))}
+          {/* Create New Card Button */}
+          <div className="p-5">
+            <button
+              className="text-sm bg-customColor-4 px-5 py-2 rounded-xl"
+              onClick={handleCreateNewClick}
+            >
+              Create New
+            </button>
+          </div>
+
+          {/* Display user's blogs and links */}
+          <div className="p-5">
+            <p className="text-xs">My Links</p>
+            <div className="mt-5 gap-2 grid grid-cols-4">
+              <SmallCardLazyBox />
+            </div>
+            <p className="text-xs mt-5">My Blogs</p>
+
+            <div className="mt-5 gap-2 grid grid-cols-4">
+              {fatCards.map((card, index) => (
+                <FatCard key={index} {...card} />
+              ))}
+            </div>
           </div>
         </div>
+
+        {/* Popup and Blog Components */}
+        {isPopupVisible && (
+          <PopUp
+            onClose={() => setIsPopupVisible(false)}
+            onSelectFatCard={() => handleCardSelection("fat")}
+            onSelectSmallCard={() => handleCardSelection("small")}
+          />
+        )}
+        {isMyBlogVisible && (
+          <MyBlog
+            onSave={(data) => handleSaveFatCard(data)}
+            onClose={() => setIsMyBlogVisible(false)}
+          />
+        )}
       </div>
-
-      {/* Popup and Blog Components */}
-      {isPopupVisible && (
-        <PopUp
-          onClose={() => setIsPopupVisible(false)}
-          onSelectFatCard={() => handleCardSelection("fat")}
-          onSelectSmallCard={() => handleCardSelection("small")}
-        />
-      )}
-      {isMyBlogVisible && (
-        <MyBlog
-          onSave={(data) => handleSaveFatCard(data)}
-          onClose={() => setIsMyBlogVisible(false)}
-        />
-      )}
-    </div>
+    </>
   );
 }
 
