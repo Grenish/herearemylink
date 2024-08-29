@@ -17,6 +17,7 @@ export default function NewUser() {
   const setRef = useCallback(
     (index: number) => (el: HTMLDivElement | null) => {
       sectionRefs.current[index] = el;
+      console.log(`Set ref for step ${index + 1}`, el);
     },
     []
   );
@@ -79,29 +80,31 @@ export default function NewUser() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const user = auth.currentUser;
-  
+
     if (user) {
       try {
-        // Save user data in Firestore under "users" collection
-        await setDoc(doc(db, "users", formData.username), {
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          username: formData.username,
-          bio: formData.bio,
-          profileImage: selectedImage,
-          email: user.email,
-          uid: user.uid,
-          createdAt: serverTimestamp(),
-          link: {
-            blogs: [],
-            smallLinks: [],
-          },
-          extras: {
-            clicks: 0,
-            visitors: 0,
+        // Save user data in Firestore under "users" collection with the document id as the uid
+        await setDoc(doc(db, "users", user.uid), {
+          uid: user.uid, // Store uid inside the document data as well
+          profile: {
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            username: formData.username,
+            bio: formData.bio,
+            profileImage: selectedImage,
+            email: user.email,
+            createdAt: serverTimestamp(),
+            link: {
+              blogs: [],
+              smallLinks: [],
+            },
+            extras: {
+              clicks: 0,
+              visitors: 0,
+            },
           },
         });
-  
+
         alert("Profile saved successfully");
         router.push("/dashboard");
       } catch (error) {
@@ -111,7 +114,6 @@ export default function NewUser() {
       alert("No user is signed in");
     }
   };
-  
 
   return (
     <div className="h-screen overflow-hidden">
