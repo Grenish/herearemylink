@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { Divider } from "@nextui-org/divider";
 import { logo } from "@/app/assets";
@@ -36,6 +36,17 @@ export default function Login() {
   const handleSeePassword = () => {
     setSeePassword((prev) => !prev);
   };
+
+  // Ensure that the component only renders on the client side
+  const [isClient, setIsClient] = useState(false);
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  if (!isClient) {
+    return null; // Render nothing on the server
+  }
+
   return (
     <div className="flex h-screen bg-[#b1ac7034]">
       <div className="w-full flex flex-col items-center justify-center">
