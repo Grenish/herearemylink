@@ -8,9 +8,10 @@ import SmallCardLazyBox from "../components/SmallCardLazyBox";
 import { Textarea } from "@nextui-org/react";
 import Image from "next/image";
 import { db, auth } from "@/lib/firebaseConfig";
-import { getDoc, doc } from "firebase/firestore";
+import { getDoc, doc, updateDoc, arrayUnion } from "firebase/firestore";
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import { useRouter } from "next/navigation";
+import Loader from "../components/Loader";
 
 type FatCardData = {
   title: string;
@@ -23,20 +24,15 @@ export default function Dashboard() {
   const router = useRouter();
 
   const [userData, setUserData] = useState<any>(null);
+  const [blogs, setBlogs] = useState<FatCardData[]>([]); // State for blogs
   const [copied, setCopied] = useState(false);
   const [isPopupVisible, setIsPopupVisible] = useState(false);
   const [isMyBlogVisible, setIsMyBlogVisible] = useState(false);
+  const [loading, setLoading] = useState(true);
   const inputRef = useRef<HTMLInputElement>(null);
   const [selectedCard, setSelectedCard] = useState<"fat" | "small" | null>(
     null
   );
-  const [fatCardData, setFatCardData] = useState<FatCardData>({
-    title: "",
-    desc: "",
-    link: "",
-    image: "",
-  });
-  const [fatCards, setFatCards] = useState<FatCardData[]>([]);
 
   const handleSignOut = () => {
     signOut(auth)
@@ -60,6 +56,11 @@ export default function Dashboard() {
             const userData = userDoc.data();
             if (userData && userData.profile) {
               setUserData(userData.profile); // Set userData to the profile data
+
+              // Fetch the blogs if they exist
+              if (userData.profile.blogs) {
+                setBlogs(userData.profile.blogs);
+              }
             } else {
               console.log("User profile data does not exist.");
               alert("User profile data does not exist.");
@@ -75,19 +76,42 @@ export default function Dashboard() {
               error instanceof Error ? error.message : String(error)
             }`
           );
+        } finally {
+          setLoading(false); // Set loading to false after fetching
         }
       } else {
         console.log("No user is authenticated. Redirecting to login.");
-        router.push("/"); // Redirect to home or login if no user is signed in
+        router.push("/");
+        setLoading(false); // Set loading to false if no user is authenticated
       }
     });
 
     return () => unsubscribe();
   }, [router]);
 
-  const handleSaveFatCard = (data: FatCardData) => {
-    setFatCards([...fatCards, data]);
-    setIsMyBlogVisible(false); // Hide MyBlog after saving
+  if (loading) {
+    return <Loader />; // Show the loader while loading is true
+  }
+
+  const handleSaveFatCard = async (data: FatCardData) => {
+    if (auth.currentUser) {
+      const userDocRef = doc(db, "users", auth.currentUser.uid);
+
+      try {
+        // Update the user's document with the new blog post
+        await updateDoc(userDocRef, {
+          "profile.blogs": arrayUnion(data), // Append the new blog to the 'blogs' array
+        });
+        setBlogs((prevBlogs) => [...prevBlogs, data]); // Update local state
+        setIsMyBlogVisible(false);
+        alert("Blog saved successfully!");
+      } catch (error) {
+        console.error("Error saving blog:", error);
+        alert("Error saving blog. Please try again.");
+      }
+    } else {
+      alert("No user authenticated.");
+    }
   };
 
   const copyToClipboard = async () => {
@@ -115,57 +139,70 @@ export default function Dashboard() {
     }
   };
 
+  // Helper function to validate image URL or Base64 format
+  const isValidImageSrc = (src: string) => {
+    return (
+      src.startsWith("data:image/") || // Checks for Base64 data URL format
+      src.startsWith("http://") ||
+      src.startsWith("https://")
+    );
+  };
+
   return (
-    <>
-      <div className="flex">
-        <div className="w-1/5 h-screen border-r flex flex-col items-center p-2">
-          {/* Display user profile image and info */}
-          <div className="mt-5">
+    <div className="flex">
+      {/* Your existing component JSX */}
+      <div className="w-1/5 h-screen border-r flex flex-col items-center p-2">
+        {/* Display user profile image and info */}
+        <div className="mt-5">
+          {isValidImageSrc(userData?.profileImage) ? (
             <img
-              src={userData?.profileImage || "https://via.placeholder.com/150"}
+              src={userData?.profileImage}
               alt="Profile"
               className="w-[200px] h-[200px] rounded-full object-cover"
             />
-          </div>
-          <h2 className="mt-4 text-xl font-semibold">
-            {userData?.firstName} {userData?.lastName}
-          </h2>
-          <p className="text-xs">@{userData?.username}</p>
-          <p className="text-center text-sm mt-2 bg-gray-200 p-2 rounded-xl">
-            {userData?.bio || "User bio goes here."}
-          </p>
-          <div className="mt-2 flex gap-3">
-            <div className="text-center p-2 px-4 bg-gray-200 rounded-xl">
-              <p className="text-3xl font-bold">
-                {userData?.extras?.visitors || 0}
-              </p>
-              <h2 className="text-xs">Visitors</h2>
-            </div>
-            <div className="text-center p-2 px-4 bg-gray-200 rounded-xl">
-              <p className="text-3xl font-bold">
-                {userData?.extras?.clicks || 0}
-              </p>
-              <h2 className="text-xs">Clicks</h2>
-            </div>
-          </div>
-          <p className="mt-2 text-xs hover:underline cursor-pointer">
-            See More
-          </p>
-          <button
-            className="p-2 bg-gray-300 rounded-lg px-5 mt-2"
-            onClick={handleSignOut}
-          >
-            Logout
-          </button>
+          ) : (
+            <img
+              src="https://via.placeholder.com/150"
+              alt="Profile"
+              className="w-[200px] h-[200px] rounded-full object-cover"
+            />
+          )}
         </div>
+        <h2 className="mt-4 text-xl font-semibold">
+          {userData?.extras?.firstName} {userData?.extras?.lastName}
+        </h2>
+        <p className="text-xs">@{userData?.username}</p>
+        <p className="text-center text-sm mt-2 bg-gray-200 p-2 rounded-xl w-full">
+          {userData?.bio || "Write something.."}
+        </p>
+        <div className="mt-2 flex gap-3">
+          <div className="text-center p-2 px-4 bg-gray-200 rounded-xl">
+            <p className="text-3xl font-bold">
+              {userData?.extras?.visitors || 0}
+            </p>
+            <h2 className="text-xs">Visitors</h2>
+          </div>
+          <div className="text-center p-2 px-4 bg-gray-200 rounded-xl">
+            <p className="text-3xl font-bold">
+              {userData?.extras?.clicks || 0}
+            </p>
+            <h2 className="text-xs">Clicks</h2>
+          </div>
+        </div>
+        <p className="mt-2 text-xs hover:underline cursor-pointer">See More</p>
+        <button
+          className="p-2 bg-gray-300 rounded-lg px-5 mt-2"
+          onClick={handleSignOut}
+        >
+          Logout
+        </button>
+      </div>
 
-        {/* Main content area */}
-        <div className="flex-1">
-          {/* Copy link section */}
-          <div
-            className="p-5 w-full border-b overflow-hidden"
-            onClick={copyToClipboard}
-          >
+      {/* Main content area */}
+      <div className="flex-1">
+        {/* Copy link section */}
+        <div className="p-5 w-full border-b overflow-hidden">
+          <div className="flex items-center gap-5">
             <div className="w-1/2 flex items-center bg-gray-200 rounded-xl pr-3">
               <input
                 type="text"
@@ -173,6 +210,7 @@ export default function Dashboard() {
                 value={`herearemylinks.vercel.app/${userData?.username}`}
                 readOnly
                 ref={inputRef}
+                onClick={copyToClipboard}
               />
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -181,68 +219,77 @@ export default function Dashboard() {
                 fill="#000000"
                 viewBox="0 0 256 256"
                 className="cursor-pointer"
+                onClick={copyToClipboard}
               >
                 <path d="M216,32H88a8,8,0,0,0-8,8V80H40a8,8,0,0,0-8,8V216a8,8,0,0,0,8,8H168a8,8,0,0,0,8-8V176h40a8,8,0,0,0,8-8V40A8,8,0,0,0,216,32ZM160,208H48V96H160Zm48-48H176V88a8,8,0,0,0-8-8H96V48H208Z"></path>
               </svg>
             </div>
-            {copied && (
-              <span className="flex gap-1 items-center text-green-500 mt-1">
-                <p className="text-xs">Copied</p>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="15"
-                  height="15"
-                  fill="currentColor"
-                  viewBox="0 0 256 256"
-                >
-                  <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
-                </svg>
-              </span>
-            )}
-          </div>
-
-          {/* Create New Card Button */}
-          <div className="p-5">
-            <button
-              className="text-sm bg-customColor-4 px-5 py-2 rounded-xl"
-              onClick={handleCreateNewClick}
-            >
-              Create New
-            </button>
-          </div>
-
-          {/* Display user's blogs and links */}
-          <div className="p-5">
-            <p className="text-xs">My Links</p>
-            <div className="mt-5 gap-2 grid grid-cols-4">
-              <SmallCardLazyBox />
-            </div>
-            <p className="text-xs mt-5">My Blogs</p>
-
-            <div className="mt-5 gap-2 grid grid-cols-4">
-              {fatCards.map((card, index) => (
-                <FatCard key={index} {...card} />
-              ))}
+            <div className="">
+              <button
+                className="p-2 bg-indigo-400 rounded-xl px-5"
+                onClick={() => router.push(`/${userData?.username}`)}
+              >
+                See
+              </button>
             </div>
           </div>
+          {copied && (
+            <span className="flex gap-1 items-center text-green-500 mt-1">
+              <p className="text-xs">Copied</p>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="15"
+                height="15"
+                fill="currentColor"
+                viewBox="0 0 256 256"
+              >
+                <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1-11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"></path>
+              </svg>
+            </span>
+          )}
         </div>
 
-        {/* Popup and Blog Components */}
-        {isPopupVisible && (
-          <PopUp
-            onClose={() => setIsPopupVisible(false)}
-            onSelectFatCard={() => handleCardSelection("fat")}
-            onSelectSmallCard={() => handleCardSelection("small")}
-          />
-        )}
-        {isMyBlogVisible && (
-          <MyBlog
-            onSave={(data) => handleSaveFatCard(data)}
-            onClose={() => setIsMyBlogVisible(false)}
-          />
-        )}
+        {/* Create New Card Button */}
+        <div className="p-5">
+          <button
+            className="text-sm bg-customColor-4 px-5 py-2 rounded-xl"
+            onClick={handleCreateNewClick}
+          >
+            Create New
+          </button>
+        </div>
+
+        {/* Display user's blogs and links */}
+        <div className="p-5">
+          <p className="text-xs">My Links</p>
+          <div className="mt-5 gap-2 grid grid-cols-4">
+            <SmallCardLazyBox />
+          </div>
+          <p className="text-xs mt-5">My Blogs</p>
+
+          <div className="mt-5 gap-2 grid grid-cols-4">
+            {blogs.map((card, index) => (
+              <FatCard key={index} {...card} />
+            ))}
+          </div>
+        </div>
       </div>
-    </>
+
+      {/* Popup and Blog Components */}
+      {isPopupVisible && (
+        <PopUp
+          onClose={() => setIsPopupVisible(false)}
+          onSelectFatCard={() => handleCardSelection("fat")}
+          onSelectSmallCard={() => handleCardSelection("small")}
+        />
+      )}
+      {isMyBlogVisible && (
+        <MyBlog
+          onSave={(data) => handleSaveFatCard(data)}
+          onClose={() => setIsMyBlogVisible(false)}
+        />
+      )}
+    </div>
   );
 }
 
@@ -305,9 +352,14 @@ const MyBlog: React.FC<MyBlogProps> = ({ onSave, onClose }) => {
     const file = e.target.files && e.target.files[0];
     if (file) {
       setImage(file);
-      // Preview the image
-      const previewUrl = URL.createObjectURL(file);
-      setImagePreview(previewUrl);
+
+      // Convert image to Base64
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setImagePreview(base64String); // Set the Base64 string as preview
+      };
+      reader.readAsDataURL(file);
     }
   };
 
