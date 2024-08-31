@@ -32,11 +32,9 @@
   cursor: pointer;
 }
 
-
 /* 
   <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="#000000" viewBox="0 0 256 256"><path d="M228.88,26.19a9,9,0,0,0-9.16-1.57L17.06,103.93a14.22,14.22,0,0,0,2.43,27.21L72,141.45V200a15.92,15.92,0,0,0,10,14.83,15.91,15.91,0,0,0,17.51-3.73l25.32-26.26L165,220a15.88,15.88,0,0,0,10.51,4,16.3,16.3,0,0,0,5-.79,15.85,15.85,0,0,0,10.67-11.63L231.77,35A9,9,0,0,0,228.88,26.19Zm-61.14,36L78.15,126.35l-49.6-9.73ZM88,200V152.52l24.79,21.74Zm87.53,8L92.85,135.5l119-85.29Z"></path></svg>
 */
-
 
 .smallcardlazy {
   position: relative;
@@ -66,4 +64,95 @@
   border-radius: 10px;
   background-color: rgba(100, 100, 100, 0.5);
   cursor: pointer;
+}
+
+/* HTML: <div class="loader"></div> */
+.loader,
+.loader:before,
+.loader:after {
+  width: 35px;
+  aspect-ratio: 1;
+  box-shadow: 0 0 0 3px inset #222;
+  position: relative;
+  animation: 1.5s infinite 0.5s;
+  animation-name: l7-1, l7-2;
+}
+.loader:before,
+.loader:after {
+  content: "";
+  position: absolute;
+  left: calc(100% + 5px);
+  animation-delay: 1s, 0s;
+}
+.loader:after {
+  left: -40px;
+  animation-delay: 0s, 1s;
+}
+@keyframes l7-1 {
+  0%,
+  55%,
+  100% {
+    border-top-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+  20%,
+  30% {
+    border-top-left-radius: 50%;
+    border-bottom-right-radius: 50%;
+  }
+}
+@keyframes l7-2 {
+  0%,
+  55%,
+  100% {
+    border-bottom-left-radius: 0;
+    border-top-right-radius: 0;
+  }
+  20%,
+  30% {
+    border-bottom-left-radius: 50%;
+    border-top-right-radius: 50%;
+  }
+}
+
+.html {
+  --s: 132px; /* control the size*/
+  --c1: #f2f2f2;
+  --c2: #cdcbcc;
+  --c3: #999999;
+
+  --_g: 0 120deg, #0000 0;
+  background: conic-gradient(
+      from 0deg at calc(500% / 6) calc(100% / 3),
+      var(--c3) var(--_g)
+    ),
+    conic-gradient(
+      from -120deg at calc(100% / 6) calc(100% / 3),
+      var(--c2) var(--_g)
+    ),
+    conic-gradient(
+      from 120deg at calc(100% / 3) calc(500% / 6),
+      var(--c1) var(--_g)
+    ),
+    conic-gradient(
+      from 120deg at calc(200% / 3) calc(500% / 6),
+      var(--c1) var(--_g)
+    ),
+    conic-gradient(
+      from -180deg at calc(100% / 3) 50%,
+      var(--c2) 60deg,
+      var(--c1) var(--_g)
+    ),
+    conic-gradient(
+      from 60deg at calc(200% / 3) 50%,
+      var(--c1) 60deg,
+      var(--c3) var(--_g)
+    ),
+    conic-gradient(
+      from -60deg at 50% calc(100% / 3),
+      var(--c1) 120deg,
+      var(--c2) 0 240deg,
+      var(--c3) 0
+    );
+  background-size: calc(var(--s) * 1.732) var(--s);
 }
